@@ -9,7 +9,7 @@ class ChatViewModelWebSocket {
   private var webSocketTask: URLSessionWebSocketTask?
   @Published var isConnected = false
   @Published var webSocketUrl = "ws://192.168.0.62:5123"
-  @Published var lastMessage = ""
+  @Published var lastMessage = "nil"
 
   fileprivate func connect() async {
     guard let url = URL(string: webSocketUrl) else {

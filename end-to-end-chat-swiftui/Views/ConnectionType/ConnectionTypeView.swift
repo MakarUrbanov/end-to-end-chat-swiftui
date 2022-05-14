@@ -1,17 +1,21 @@
-import Foundation
 import SwiftUI
 
 struct ConnectionTypeView: View {
   @EnvironmentObject var mainViewModel: MainViewModel
+  @State var isNavigateToChat = false
 
   var body: some View {
-    NavigationView {
-      VStack {
+    VStack {
+
+      Text("Hello, \(mainViewModel.username)!")
+
+      NavigationLink(destination: NavigationViews.chatView, isActive: $isNavigateToChat) {
         Button(action: {
-          mainViewModel.stage = .chat
+          isNavigateToChat = true
         }, label: { Text("Next") })
       }
-      .navigationBarTitle("Connection type")
+
     }
+    .navigationBarTitle("Connection type")
   }
 }

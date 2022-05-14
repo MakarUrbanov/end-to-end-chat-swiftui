@@ -1,15 +1,8 @@
 import Foundation
 
-enum Stages {
-  case userData
-  case connectType
-  case chat
-}
-
 final class MainViewModel: ObservableObject {
   @Published var username = ""
   @Published var isAuth = false
-  @Published var stage: Stages = .userData
 
   func setUserData(username: String, completionHandler: @escaping (Bool) -> Void) {
     switch true {
@@ -19,7 +12,6 @@ final class MainViewModel: ObservableObject {
         return
 
       default:
-        stage = .connectType
         completionHandler(true)
     }
 
@@ -29,6 +21,5 @@ final class MainViewModel: ObservableObject {
 
   func exit() {
     isAuth = false
-    stage = .userData
   }
 }

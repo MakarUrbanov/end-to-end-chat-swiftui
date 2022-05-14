@@ -1,4 +1,3 @@
-import Foundation
 import SwiftUI
 
 struct SimpleTextField<Label: View>: View {

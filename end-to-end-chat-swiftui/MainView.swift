@@ -4,18 +4,10 @@ struct MainView: View {
   @StateObject var viewModel = MainViewModel()
 
   var body: some View {
-    ZStack {
-      switch viewModel.stage {
-        case .userData:
-          UserView()
-
-        case .connectType:
-          ConnectionTypeView()
-
-        case .chat:
-          ChatView()
-      }
+    NavigationView {
+      UserView()
     }
+    .navigationViewStyle(.stack)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .environmentObject(viewModel)
   }
