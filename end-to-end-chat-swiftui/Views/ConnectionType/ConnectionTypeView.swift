@@ -7,15 +7,37 @@ struct ConnectionTypeView: View {
   var body: some View {
     VStack {
 
-      Text("Hello, \(mainViewModel.username)!")
+      NavigationLink(destination: NavigationViews.chatView, isActive: $isNavigateToChat) {
+        SimplePressableWrapper(content: {
+          Text("Create a new chat")
+          .frame(maxWidth: .infinity)
+          .padding()
+          .background(.blue)
+          .foregroundColor(.white)
+          .cornerRadius(8)
+        }, perform: {
+          mainViewModel.connectionType = .create
+          isNavigateToChat = true
+        })
+      }
 
       NavigationLink(destination: NavigationViews.chatView, isActive: $isNavigateToChat) {
-        Button(action: {
+        SimplePressableWrapper(content: {
+          Text("Join to chat")
+          .frame(maxWidth: .infinity)
+          .padding()
+          .background(.blue.opacity(0.8))
+          .foregroundColor(.white)
+          .cornerRadius(8)
+        }, perform: {
+          mainViewModel.connectionType = .join
           isNavigateToChat = true
-        }, label: { Text("Next") })
+        })
+        .padding(.top)
       }
 
     }
-    .navigationBarTitle("Connection type")
+    .padding(.horizontal)
+    .navigationBarTitle("Hello, \(mainViewModel.username)!")
   }
 }

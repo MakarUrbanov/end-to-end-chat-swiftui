@@ -1,112 +1,87 @@
 import Foundation
-import Combine
 
-struct ChatMessage: Encodable, Decodable {
-  let message: String
+struct ChatWebSocketMessageTest: Identifiable {
+  let id = UUID().uuidString
+  let message: ChatWebSocketMessage
 }
 
-class ChatViewModelWebSocket {
-  private var webSocketTask: URLSessionWebSocketTask?
+final class ChatViewModel: ObservableObject {
+  @Published var hubId = ""
   @Published var isConnected = false
-  @Published var webSocketUrl = "ws://192.168.0.62:5123"
-  @Published var lastMessage = "nil"
+  @Published var messages: [ChatWebSocketMessageTest] = []
+  private(set) lazy var webSocket: WebSocket = WebSocket(
+    url: "ws://localhost:5123",
+    onMessageHandler: chatMessageHandler,
+    isConnectedHandler: isConnectedHandler
+  )
 
-  fileprivate func connect() async {
-    guard let url = URL(string: webSocketUrl) else {
-      return
-    }
-    webSocketTask = URLSession.shared.webSocketTask(with: url)
-    webSocketTask?.receive(completionHandler: onReceive)
-    webSocketTask?.resume()
-    await self.PING()
-  }
+  func chatMessageHandler(message: ChatWebSocketMessage) {
+    print("ChatMessageHandler: \(message)")
 
-  private func PING() async {
-    do {
-      let ping = ChatMessage(message: "Ping")
-      guard let json = try? JSONEncoder().encode(ping) else {
+    switch message.event {
+      case .create:
+        print("create")
+        self.hubId = message.hubId ?? ""
         return
-      }
 
-      guard let stringJSON = String(data: json, encoding: .utf8) else {
+      case .join:
+        print("join")
+//
+//      case .leave:
+//
+//      case .disconnect:
+//
+      case .message:
+        let renderMessage = ChatWebSocketMessageTest(message: message)
+        messages += [renderMessage]
         return
-      }
+//
+//      case .typing:
+//
+//      case .stopTyping:
 
-      try await webSocketTask?.send(.string(stringJSON))
-      isConnected = true
-      print("PING")
-    } catch {
-      print("ERROR PING: \(error)")
+      default:
+        print("")
     }
   }
 
-  fileprivate func onReceive(incoming: Result<URLSessionWebSocketTask.Message, Error>) {
-    if case .success(let message) = incoming {
-      isConnected = true
-      onMessage(message: message)
-    } else if case .failure(let error) = incoming {
-      isConnected = false
-      reconnect()
-      print("ERROR onReceive: \(error)")
-    }
+  private func isConnectedHandler(isConnected: Bool) {
+    self.isConnected = isConnected
   }
 
-  fileprivate func onMessage(message: URLSessionWebSocketTask.Message) {
-    if case .string(let text) = message {
-      guard let data = text.data(using: .utf8) else {
+  func onAppear(connectionType: ConnectionTypeKeys, isPresentSheet: @escaping (Bool) -> Void) {
+    switch connectionType {
+      case .join:
+        isPresentSheet(true)
         return
-      }
 
-      let chatMessage = try? JSONDecoder().decode(ChatMessage.self, from: data)
-
-      DispatchQueue.main.async {
-        self.lastMessage = chatMessage?.message ?? "failed"
-      }
-    }
-
-    webSocketTask?.receive(completionHandler: onReceive)
-  }
-
-  fileprivate func reconnect() {
-    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [self] in
-      Task {
-        await self.connect()
-      }
+      case .create:
+        isPresentSheet(true)
+        self.createHub()
     }
   }
 
-  func sendMessage(text: String) async {
-    do {
-      let message = ChatMessage(message: text)
-      let json = try JSONEncoder().encode(message)
-      guard let jsonString = String(data: json, encoding: .utf8) else {
-        return
-      }
-
-      try await webSocketTask?.send(.string(jsonString))
-    } catch {
-      print("ERROR sendMessage: \(error)")
-    }
-  }
-
-  fileprivate func disconnect() {
-    isConnected = false
-    webSocketTask?.cancel(with: .normalClosure, reason: nil)
-    print("disconnect")
-  }
-
-  deinit {
-    disconnect()
-  }
-}
-
-final class ChatViewModel: ChatViewModelWebSocket, ObservableObject {
-  func onAppear() async {
-    await super.connect()
-  }
-
-  func onDisappear(callback: () -> Void) {
-    super.disconnect()
+  func onDisappear(callback: () -> Void = {
+  }) {
+    webSocket.disconnect()
     callback()
+  }
+
+  func createHub() {
+    webSocket.connect(onComplete: { [self] in
+      Task {
+        let message = ChatWebSocketMessage(event: .create, hubId: "")
+        await webSocket.sendMessage(message: message)
+      }
+    })
+  }
+
+  func joinToHub() {
+    webSocket.connect(onComplete: { [self] in
+      Task {
+        let message = ChatWebSocketMessage(event: .join, hubId: self.hubId)
+        await webSocket.sendMessage(message: message)
+      }
+    })
   }
 }
